@@ -1,0 +1,25 @@
+# 외부 라이브러리 (별도 설치)
+MeloTTS/
+models/silero-vad/
+
+# Model 파일 (용량 큰 Binary)
+models/
+*.pt
+*.pth
+*.bin
+*.gguf
+*.onnx
+
+# 설정 파일 (로컬 경로 포함)
+config.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# 임시 파일
+scratch/
