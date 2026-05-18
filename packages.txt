@@ -1,0 +1,36 @@
+Packages (python=3.10)
+
+0) Install
+OS: Raspberry Pi OS Lite 64-bit
+-> Raspberry Pi Imager Download
+-> OS Selection
+-> SD Card Selection
+-> Advanced Settings Click
+	- Host Name
+	- Wi-Fi SSID / Password
+	- SSH Activation
+	- User Name / Password
+	- Bake
+
+System Package
+-> sudo apt update
+-> sudo apt install -y portaudio19-dev libsndfile1-dev ffmpeg python3.10 python3.10-dev python3.10-venv build-essential cmake
+
+llama-cpp-python: --extra-index-url ARM64 Binary Issue
+CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip install llama-cpp-python
+
+1) Basic
+pip install sounddevice numpy openwakeword silero-vad faster-whisper ddgs
+
+2) Llama
+pip install llama-cpp-python --prefer-binary --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+
+3) Melotts
+git clone https://github.com/myshell-ai/MeloTTS.git
+pip install -e .
+python -m unidic download
+
+4) Models
+python -c "import openwakeword; openwakeword.utils.download_models()"
+huggingface-cli download bartowski/Qwen2.5-3B-Instruct-GGUF Qwen2.5-3B-Instruct-Q4_K_M.gguf --local-dir ./models
+pip install chromadb
