@@ -1,14 +1,25 @@
-# speaker
+![Banner](assets/Hoporing_Banner.png)
 
-완전한 로컬 AI 음성 Assistant Pipeline.  
-호출어 감지부터 음성 합성까지 모든 처리를 로컬에서 수행합니다.
+# AI-Speaker
+
+Raspberry Pi 5 기반 완전 로컬 AI 음성 Assistant Pipeline.  
+Wake Word 감지부터 TTS 응답까지 모든 처리를 온디바이스로 수행합니다.
 
 ---
 
 ## 실행 화면
 
-![Demo](docs/demo.gif)
-<!-- Demo GIF 또는 Screenshot 추가 후 위 경로 업데이트 -->
+![Demo](assets/demo.gif)
+
+---
+
+## Wi-Fi 설정 (Captive Portal)
+
+최초 부팅 시 `AI_SPEAKER_SETUP` AP에 접속하면 Captive Portal로 자동 연결됩니다.
+
+![Wi-Fi Setup](assets/captive_1.PNG)
+
+![Wi-Fi Connecting](assets/captive_2.PNG)
 
 ---
 
@@ -40,12 +51,15 @@ Speaker Output
 
 ## 주요 기능
 
-- **Wake Word 감지** — 호출어 인식 후 대화 Session 시작
-- **VAD** — Silero VAD 기반 음성/소음 구분, 침묵 감지 시 자동 종료
-- **STT** — Whisper 로컬 추론 (한국어 지원)
-- **LLM** — llama.cpp 기반 로컬 LLM (GPU Layer 설정 가능)
-- **Streaming TTS** — LLM Token Streaming → 문장 단위 분할 → ThreadPoolExecutor 병렬 합성 → 순차 재생
-- **Memory / Tool** — 대화 기억 저장, 검색 Tool 연동
+- **Wake Word 감지** — 호출어 인식 후 대화 Session 시작, 음성으로 준비 완료 알림
+- **VAD** — Silero VAD 기반 음성/소음 구분, 침묵 감지 시 Session 자동 종료
+- **STT** — Faster-Whisper 로컬 추론 (한국어)
+- **LLM** — llama.cpp 기반 Qwen2.5 로컬 추론 (OpenBLAS 가속)
+- **Streaming TTS** — Token Streaming → 문장 단위 분할 → ThreadPoolExecutor 병렬 합성 → 순차 재생
+- **종료 명령** — "종료", "꺼줘" 등 음성 명령으로 시스템 Shutdown
+- **Memory** — ChromaDB 기반 대화 내용 벡터 저장 및 검색
+- **Web Search Tool** — DuckDuckGo 검색 Tool 연동
+- **Captive Portal** — 최초 부팅 시 AP 모드로 Wi-Fi 설정 지원
 
 ---
 
@@ -53,70 +67,55 @@ Speaker Output
 
 | 분류 | 내용 |
 |------|------|
-| 언어 | Python 3.12+ |
-| Wake Word | 커스텀 Detector |
+| 플랫폼 | Raspberry Pi 5 (Raspberry Pi OS Lite 64-bit) |
+| 언어 | Python 3.10 |
+| Wake Word | openwakeword |
 | VAD | Silero VAD |
-| STT | Whisper (로컬) |
-| LLM | llama.cpp (로컬) |
+| STT | Faster-Whisper |
+| LLM | llama-cpp-python (Qwen2.5-3B-Instruct GGUF) |
 | TTS | MeloTTS (한국어) |
+| Memory | ChromaDB |
+| 검색 | DuckDuckGo Search (ddgs) |
 | 병렬처리 | ThreadPoolExecutor |
 
 ---
 
-## 설치
+## 설치 (Raspberry Pi 5)
 
+**1. 시스템 패키지**
 ```bash
-git clone https://github.com/Hoporing/speaker.git
-cd speaker
+sudo apt update
+sudo apt install -y portaudio19-dev libsndfile1-dev ffmpeg python3.10 python3.10-dev python3.10-venv build-essential cmake
+```
 
-# 의존성 설치
-pip install torch torchaudio
-pip install git+https://github.com/myshell-ai/MeloTTS.git
-pip install openai-whisper
-pip install llama-cpp-python
-pip install PyAudio numpy pyyaml
+**2. Python 패키지**
+```bash
+pip install sounddevice numpy openwakeword silero-vad faster-whisper ddgs chromadb
+```
+
+**3. llama-cpp-python (ARM64)**
+```bash
+CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip install llama-cpp-python
+```
+
+**4. MeloTTS**
+```bash
+git clone https://github.com/myshell-ai/MeloTTS.git
+cd MeloTTS && pip install -e .
+python -m unidic download
+```
+
+**5. 모델 다운로드**
+```bash
+python -c "import openwakeword; openwakeword.utils.download_models()"
+huggingface-cli download bartowski/Qwen2.5-3B-Instruct-GGUF Qwen2.5-3B-Instruct-Q4_K_M.gguf --local-dir ./models
 ```
 
 ---
 
 ## 설정
 
-`config.yaml`을 작성합니다. (`config.yaml.example` 참고)
-
-```yaml
-audio:
-  sample_rate: 16000
-  chunk_size: 512
-  input_device: null   # null이면 기본 Device
-  output_device: null
-
-wake_word:
-  model: "your_wake_word_model"
-  threshold: 0.5
-
-vad:
-  model_path: "models/silero_vad.onnx"
-  threshold: 0.5
-
-stt:
-  model_path: "models/whisper/medium"
-  device: "cuda"
-  language: "ko"
-
-llm:
-  model_path: "models/llm/your_model.gguf"
-  n_ctx: 4096
-  n_gpu_layers: 35
-  max_tokens: 512
-  temperature: 0.7
-
-tts:
-  ckpt_path: "models/melo/checkpoint.pth"
-  config_path: "models/melo/config.json"
-  bert_path: "models/melo/bert"
-  language: "KR"
-  speed: 1.0
-```
+`config.yaml.example`을 참고하여 `config.yaml`을 작성합니다.
 
 ---
 
@@ -137,6 +136,8 @@ python main.py
 | Library | License |
 |---------|---------|
 | MeloTTS | MIT |
-| Whisper (OpenAI) | MIT |
+| Faster-Whisper | MIT |
 | Silero VAD | MIT |
 | llama-cpp-python | MIT |
+| openwakeword | Apache 2.0 |
+| ChromaDB | Apache 2.0 |

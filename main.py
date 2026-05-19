@@ -7,8 +7,8 @@ import logging
 warnings.filterwarnings("ignore")
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = '1'
 os.environ['TRANSFORMERS_VERBOSITY'] = 'error'
-os.environ['HF_HUB_OFFLINE'] = '1'
-os.environ['TRANSFORMERS_OFFLINE'] = '1'
+# os.environ['HF_HUB_OFFLINE'] = '1'
+# os.environ['TRANSFORMERS_OFFLINE'] = '1'
 
 # 2. 라이브러리 로깅 제어
 logging.getLogger("transformers").setLevel(logging.ERROR)
@@ -168,6 +168,11 @@ def main():
     logger.info("준비 완료. 호출어 대기 시작")
     # 초기 시작 시에는 자연스럽게 버퍼가 채워지도록 reset 생략 또는 시작 후 호출
     audio_input.start()
+    result = tts.synthesize("도울 준비가 되었습니다.")
+    if result:
+        audio_out, sr = result
+        audio_output.play(audio_out, sr)
+        audio_output.wait_until_done()
 
     try:
         while True:
@@ -181,6 +186,11 @@ def main():
 
             logger.info("호출어 감지! 사용자 요청 대기 시작")
             audio_input.clear()
+            result = tts.synthesize("네. 무엇을 도와드릴까요?")
+            if result:
+                audio_out, sr = result
+                audio_output.play(audio_out, sr)
+                audio_output.wait_until_done()
 
             # [단계 2] 연속 대화 세션 시작
             while True:
@@ -205,6 +215,17 @@ def main():
                     logger.info("인식된 텍스트 없음. 세션 종료")
                     break
                 logger.info(f"인식 결과: {text}")
+                SHUTDOWN_COMMANDS = ["종료", "꺼줘", "종료해줘", "끄기", "시스템 종료"]
+                if any(cmd in text for cmd in SHUTDOWN_COMMANDS):
+                    logger.info("종료 명령 감지")
+                    result = tts.synthesize("네, 종료합니다. 안녕히 계세요.")
+                    if result:
+                        audio_out, sr = result
+                        audio_output.play(audio_out, sr)
+                        audio_output.wait_until_done()
+                    import os
+                    os.system("sudo shutdown now")
+                    break
 
                 logger.info("응답 생성 중")
                 buffer = ""
@@ -256,6 +277,11 @@ def main():
             audio_input.clear()
             wake_word.reset()
             logger.info("준비 완료. 호출어 대기 시작")
+            result = tts.synthesize("도울 준비가 되었습니다.")
+            if result:
+                audio_out, sr = result
+                audio_output.play(audio_out, sr)
+                audio_output.wait_until_done()
 
     except KeyboardInterrupt:
         logger.info("프로그램 종료")
